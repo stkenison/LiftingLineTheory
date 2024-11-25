@@ -29,7 +29,6 @@ if type(data['wing']['washout']['amount[deg]']) == int or type(data['wing']['was
     washout_amount = np.radians(data['wing']['washout']['amount[deg]']) #Load washout amount from input file
 else:
     washout_amount = 2*(R_T+1)*data['wing']['washout']['CL_design']/(np.pi*C_La_2D) #define washout based on optimum washout distribution for wings with linear taper
-print('washout = ', washout_amount)
 
 #create C and C inverse arrays
 C = np.zeros((N,N)) #initialize C array
@@ -54,7 +53,7 @@ begin_z_b = data['wing']['aileron']['begin[z/b]']
 end_z_b = data['wing']['aileron']['end[z/b]']
 begin_cf_c = data['wing']['aileron']['begin[cf/c]']
 end_cf_c = data['wing']['aileron']['end[cf/c]']
-for i in range(N):
+for i in range(N): #only define theta_f within user-specified ranges
     if (z_b[i] > begin_z_b and z_b[i] < end_z_b):
         cf_c = begin_cf_c+(abs(z_b[i])-begin_z_b)*(end_cf_c-begin_cf_c)/(end_z_b-begin_z_b)
         theta_f[i] = np.arccos(2*cf_c-1)
@@ -109,25 +108,45 @@ C_lda = -np.pi*R_A*c[1]/4
 #calculate C_lp value 
 C_lp = -np.pi*R_A*d[1]/4
 
+
+
+#Coefficients as a result of user-specified operating condition
+#Define needed constants
+delta_a = np.radians(data['condition']['aileron_deflection[deg]'])
+if type(data['condition']['pbar']) == int or type(data['condition']['pbar']) == float:
+    p_bar = data['condition']['pbar'] 
+else:
+    p_bar = 1
+print("p_bar = ",p_bar,"NEEDS TO BE REDEFINED, HOW TO CALCULATE (EQN 6.10)")
+
 #calculate coefficient of lift
 if type(data['condition']['alpha_root[deg]']) == int or type(data['condition']['alpha_root[deg]']) == float:
     alpha_root = np.radians(data['condition']['alpha_root[deg]'])
     C_L = C_La_3D*(alpha_root-epsilon_omega*washout_amount)
 else:
-    C_L = data['wing']['condition']['CL']
-    alpha_root = np.radians(1) #calculate root angle of attack
+    C_L = data['condition']['CL']
+    alpha_root = C_L/C_La_3D+epsilon_omega*washout_amount #calculate root angle of attack
+    
+#define A array used to calculate performance coefficients
+A = np.zeros(N)
+for j in range(N):
+    A[j] = a[j]*alpha_root-b[j]*washout_amount+c[j]*delta_a+d[j]*p_bar
 
 #calculate induced drag coefficient
-C_Di = 1
+C_Di = -np.pi*R_A*p_bar/2*A[1]
+for j in range(N):
+    C_Di += np.pi*R_A*(j+1)*(A[j])**2
 
 #calculate rolling moment coefficient
-C_l = 1
+C_l = -np.pi*R_A/4*A[1]
 
 #calculate yawing moment coefficient
-C_n = 1
+C_n = -(A[0]+A[2])*np.pi*R_A*p_bar/8
+for j in range(1,N):
+    C_n += np.pi*R_A/4*((2*(j+1)-1)*A[j-1]*A[j])
 
 #calculate steady dimenionless roll rate
-p_steady = 1
+p_steady = -C_lda/C_lp*delta_a
 
 
 
@@ -143,7 +162,7 @@ with open('output.txt', 'w') as f:
 #print calculated constant values to terminal
 print("K_L =",kappa_L)
 print("C_L,\u03B1 =",C_La_3D)
-print("\u03B5_\u03A9 =", epsilon_omega,"COULD HAVE ISSUES") 
+print("\u03B5_\u03A9 =", epsilon_omega) 
 print("K_D =",kappa_D)
 print("K_DL =",kappa_DL)
 print("K_D\u03A9 = =",kappa_Domega)
@@ -152,8 +171,9 @@ print("C_l,\u03B4\u03B1 =",C_lda)
 print("C_l,\u0070\u0304 =",C_lp,"\n")
 
 #print calculated perfomance values to terminal
-print("C_L =",C_L)
-print("C_Di",C_Di)
+print("VERIFY THE FOLLOWING...")
+print("C_L =",C_L,"OR",np.pi*R_A*A[0])
+print("C_Di =",C_Di)
 print("C_l =",C_l)
 print("C_n =",C_n)
 print("\u0070\u0304 =",p_steady,"\n")
