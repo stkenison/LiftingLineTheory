@@ -22,7 +22,7 @@ if washout_distribution_type == 'optimum':
 elif washout_distribution_type == 'linear':
     omega = np.abs(np.cos(theta)) #define linear washout distribution, eqn 6.30
 else: 
-    omega = np.zeros(N)
+    omega = np.zeros(N) #no washout
 
 #define washout based off of inputs
 if type(data['wing']['washout']['amount[deg]']) == int or type(data['wing']['washout']['amount[deg]']) == float:
@@ -121,10 +121,10 @@ print("p_bar = ",p_bar,"NEEDS TO BE REDEFINED, HOW TO CALCULATE (EQN 6.10)")
 
 #calculate coefficient of lift
 if type(data['condition']['alpha_root[deg]']) == int or type(data['condition']['alpha_root[deg]']) == float:
-    alpha_root = np.radians(data['condition']['alpha_root[deg]'])
-    C_L = C_La_3D*(alpha_root-epsilon_omega*washout_amount)
+    alpha_root = np.radians(data['condition']['alpha_root[deg]']) #use predefined angle of attack
+    C_L = C_La_3D*(alpha_root-epsilon_omega*washout_amount) #calculate C_L value based off of angle of attack
 else:
-    C_L = data['condition']['CL']
+    C_L = data['condition']['CL'] #use predefined C_L value
     alpha_root = C_L/C_La_3D+epsilon_omega*washout_amount #calculate root angle of attack
     
 #define A array used to calculate performance coefficients
@@ -144,6 +144,8 @@ C_l = -np.pi*R_A/4*A[1]
 C_n = -(A[0]+A[2])*np.pi*R_A*p_bar/8
 for j in range(1,N):
     C_n += np.pi*R_A/4*((2*(j+1)-1)*A[j-1]*A[j])
+
+
 
 #Create vectors for dimensionless lift distribution
 
@@ -189,6 +191,8 @@ C_L_aileron_tilde = C_L_aileron_hat/c_b
 C_L_roll_tilde = C_L_roll_hat/c_b
 C_L_tilde = C_L_planform_tilde+C_L_washout_tilde+C_L_aileron_tilde+C_L_roll_tilde
 
+
+
 #write output matrixes to external file
 with open('output.txt', 'w') as f:
     f.write('C = \n\n'); np.savetxt(f, C, delimiter=', ', fmt='%.5f')
@@ -210,7 +214,6 @@ print("C_l,\u03B4\u03B1 =",C_lda)
 print("C_l,\u0070\u0304 =",C_lp,"\n")
 
 #print calculated perfomance values to terminal
-print("VERIFY THE FOLLOWING...")
 print("C_L =",C_L,"OR",np.pi*R_A*A[0])
 print("C_Di =",C_Di)
 print("C_l =",C_l)
@@ -218,31 +221,38 @@ print("C_n =",C_n)
 print("\u0070\u0304_steady =",p_steady,"\n")
 
 if data['view']['planform']: #plot planform if desired by user
-    plt.figure('Planform Plot'); plt.plot(z_b,c_b/4, color = 'blue')
-    plt.plot(z_b,-3*c_b/4, color = 'blue')
+    plt.figure('Planform Plot')
+    plt.plot(z_b,c_b/4, color = 'blue'); plt.plot(z_b,-3*c_b/4, color = 'blue') #plot airfoil outline
+    plt.plot([z_b[0],z_b[0]],[-3*c_b[0]/4,c_b[0]/4],color = 'blue'); plt.plot([z_b[-1],z_b[-1]],[-3*c_b[-1]/4,c_b[-1]/4],color = 'blue')
     plt.xlabel("Spanwise Position (z/b)")
     plt.ylabel("Chord Position (c/b)")
-    plt.plot([z_b[0],z_b[0]],[-3*c_b[0]/4,c_b[0]/4],color = 'blue'); plt.plot([z_b[-1],z_b[-1]],[-3*c_b[-1]/4,c_b[-1]/4],color = 'blue')
-    for i in range(N):
+    for i in range(N): #plot theta section lines
         plt.plot([z_b[i],z_b[i]],[-3*c_b[i]/4,c_b[i]/4],color = 'red', linestyle = '--')
     plt.axis("equal")
     plt.grid(True)
-    right_aileron = np.array([[begin_z_b,end_z_b,end_z_b,begin_z_b,begin_z_b],[-1/R_A*3/4,-1/R_A*3/4,-1/R_A*3/4*(1-end_cf_c),-1/R_A*3/4*(1-begin_cf_c),-1/R_A*3/4]])
-    plt.plot(right_aileron[0,:],right_aileron[1,:],color = 'green')
+    middle = int((N-1)/2) #calculate middle index to help draw aileron
+    #create array to store points used to draw aileron
+    right_aileron = np.array([[begin_z_b,end_z_b,end_z_b,begin_z_b,begin_z_b],
+    [-3/4*(c_b[middle]+2*begin_z_b*(c_b[0]-c_b[middle])),
+    -3/4*(c_b[middle]+2*end_z_b*(c_b[0]-c_b[middle])),
+    (c_b[middle]+2*end_z_b*(c_b[0]-c_b[middle]))*(end_cf_c-3/4),
+    (c_b[middle]+2*begin_z_b*(c_b[0]-c_b[middle]))*(begin_cf_c-3/4),
+    -3/4*(c_b[middle]+2*begin_z_b*(c_b[0]-c_b[middle]))]])
+    plt.plot(right_aileron[0,:],right_aileron[1,:],color = 'green') #plot right aileron outline
     plt.plot(-right_aileron[0,:],right_aileron[1,:],color = 'green') #flip aileron coordinate array for left side
 
 if data['view']['washout_distribution']: #plot washout distribution if desired by user
-    plt.figure('Washout Distribution')
+    plt.figure('Dimensionless Washout Distribution')
     plt.plot(z_b,omega, color = 'blue')
     plt.grid(True)
-    plt.ylabel("Washout Distribution (\u03C9(z))")
+    plt.ylabel("Dimensionless Washout Distribution (\u03C9(z))")
     plt.xlabel("Spanwise Position (z/b)")
 
 if data['view']['aileron_distribution']: #plot aileron distribution if desired by user
-    plt.figure('Aileron Distribution')
+    plt.figure('Dimensionless Aileron Distribution')
     plt.plot(z_b,chi, color = 'blue')
     plt.grid(True)
-    plt.ylabel("Aileron Position (\u03A7(z))")
+    plt.ylabel("Dimensionless Aileron Distribution (\u03A7(z))")
     plt.xlabel("Spanwise Position (z/b)")
 
 if data['view']['CL_hat_distributions']: #plot CL hat distributions if desired by user
