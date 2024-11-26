@@ -112,12 +112,12 @@ C_lp = -np.pi*R_A*d[1]/4
 #Coefficients as a result of user-specified operating condition
 #Define needed constants
 delta_a = np.radians(data['condition']['aileron_deflection[deg]'])
-p_steady = -C_lda/C_lp*delta_a #calculate steady rolling rate
 if type(data['condition']['pbar']) == int or type(data['condition']['pbar']) == float:
     p_bar = data['condition']['pbar'] 
+    p_steady = p_bar
 else:
+    p_steady = -C_lda/C_lp*delta_a #calculate steady rolling rate
     p_bar = p_steady #calculate steady dimenionless roll rate
-print("p_bar = ",p_bar,"NEEDS TO BE REDEFINED, HOW TO CALCULATE (EQN 6.10)")
 
 #calculate coefficient of lift
 if type(data['condition']['alpha_root[deg]']) == int or type(data['condition']['alpha_root[deg]']) == float:
@@ -214,20 +214,24 @@ print("C_l,\u03B4\u03B1 =",C_lda)
 print("C_l,\u0070\u0304 =",C_lp,"\n")
 
 #print calculated perfomance values to terminal
-print("C_L =",C_L,"OR",np.pi*R_A*A[0])
+print("C_L =",C_L,"(eqn 6.19) or",np.pi*R_A*A[0],"(eqn 6.5)")
 print("C_Di =",C_Di)
 print("C_l =",C_l)
 print("C_n =",C_n)
-print("\u0070\u0304_steady =",p_steady,"\n")
+if type(data['condition']['pbar']) == int or type(data['condition']['pbar']) == float:
+    print("\u0070\u0304_steady =",p_steady,"(user-defined)\n")
+else:
+    print("\u0070\u0304_steady =",p_steady,"(calculated)\n")
 
 if data['view']['planform']: #plot planform if desired by user
     plt.figure('Planform Plot')
-    plt.plot(z_b,c_b/4, color = 'blue'); plt.plot(z_b,-3*c_b/4, color = 'blue') #plot airfoil outline
+    plt.plot(z_b,c_b/4, color = 'blue',label='Planform Geometry'); plt.plot(z_b,-3*c_b/4, color = 'blue') #plot airfoil outline
     plt.plot([z_b[0],z_b[0]],[-3*c_b[0]/4,c_b[0]/4],color = 'blue'); plt.plot([z_b[-1],z_b[-1]],[-3*c_b[-1]/4,c_b[-1]/4],color = 'blue')
     plt.xlabel("Spanwise Position (z/b)")
     plt.ylabel("Chord Position (c/b)")
     for i in range(N): #plot theta section lines
-        plt.plot([z_b[i],z_b[i]],[-3*c_b[i]/4,c_b[i]/4],color = 'red', linestyle = '--')
+        if i==0: plt.plot([z_b[i],z_b[i]],[-3*c_b[i]/4,c_b[i]/4],color = 'red', linestyle = '--',label='Fourier Wing Sections')
+        else: plt.plot([z_b[i],z_b[i]],[-3*c_b[i]/4,c_b[i]/4],color = 'red', linestyle = '--')
     plt.axis("equal")
     plt.grid(True)
     middle = int((N-1)/2) #calculate middle index to help draw aileron
@@ -238,8 +242,10 @@ if data['view']['planform']: #plot planform if desired by user
     (c_b[middle]+2*end_z_b*(c_b[0]-c_b[middle]))*(end_cf_c-3/4),
     (c_b[middle]+2*begin_z_b*(c_b[0]-c_b[middle]))*(begin_cf_c-3/4),
     -3/4*(c_b[middle]+2*begin_z_b*(c_b[0]-c_b[middle]))]])
-    plt.plot(right_aileron[0,:],right_aileron[1,:],color = 'green') #plot right aileron outline
+    plt.plot(right_aileron[0,:],right_aileron[1,:],color = 'green',label='Aileron Geometry') #plot right aileron outline
     plt.plot(-right_aileron[0,:],right_aileron[1,:],color = 'green') #flip aileron coordinate array for left side
+    plt.legend(loc='upper right')
+    plt.axis("equal")
 
 if data['view']['washout_distribution']: #plot washout distribution if desired by user
     plt.figure('Dimensionless Washout Distribution')
@@ -256,25 +262,30 @@ if data['view']['aileron_distribution']: #plot aileron distribution if desired b
     plt.xlabel("Spanwise Position (z/b)")
 
 if data['view']['CL_hat_distributions']: #plot CL hat distributions if desired by user
-    plt.figure('CL_hat_distributions')
-    plt.plot(z_b,C_L_planform_hat,label='C_L_planform_hat')
-    plt.plot(z_b,C_L_washout_hat,label='C_L_washout_hat')
-    plt.plot(z_b,C_L_aileron_hat,label='C_L_aileron_hat')
-    plt.plot(z_b,C_L_roll_hat,label='C_L_roll_hat')
-    plt.plot(z_b,C_L_hat,label='C_L_hat')
+    plt.figure('CL_hat Distributions')
+    plt.plot(z_b,C_L_planform_hat,label='$\\hat{C}_{L_{planform}}$')
+    plt.plot(z_b,C_L_washout_hat,label='$\\hat{C}_{L_{washout}}$')
+    plt.plot(z_b,C_L_aileron_hat,label='$\\hat{C}_{L_{aileron}}$')
+    plt.plot(z_b,C_L_roll_hat,label='$\\hat{C}_{L_{roll}}$')
+    plt.plot(z_b,C_L_hat,label='$\\hat{C}_{L}$')
     plt.grid(True)
-    plt.legend()
+    plt.ylabel("$\\hat{C}_{L}$ Distributions")
+    plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+    plt.subplots_adjust(right=0.8)  # Adjust the right margin
     plt.xlabel("Spanwise Position (z/b)")
+    plt.ylabel("$\\hat{C}_{L}$ Distributions")
 
 if data['view']['CL_tilde_distributions']: #plot CL tilde distributions if desired by user
-    plt.figure('CL_tilde_distributions')
-    plt.plot(z_b,C_L_planform_tilde,label='C_L_planform_tilde')
-    plt.plot(z_b,C_L_washout_tilde,label='C_L_washout_tilde')
-    plt.plot(z_b,C_L_aileron_tilde,label='C_L_aileron_tilde')
-    plt.plot(z_b,C_L_roll_tilde,label='C_L_roll_tilde')
-    plt.plot(z_b,C_L_tilde,label='C_L_tilde')
+    plt.figure('CL_tilde Distributions')
+    plt.plot(z_b,C_L_planform_tilde,label='$\\tilde{C}_{L_{planform}}$')
+    plt.plot(z_b,C_L_washout_tilde,label='$\\tilde{C}_{L_{washout}}$')
+    plt.plot(z_b,C_L_aileron_tilde,label='$\\tilde{C}_{L_{aileron}}$')
+    plt.plot(z_b,C_L_roll_tilde,label='$\\tilde{C}_{L_{roll}}$')
+    plt.plot(z_b,C_L_tilde,label='$\\tilde{C}_{L}$')
     plt.grid(True)
-    plt.legend()
     plt.xlabel("Spanwise Position (z/b)")
+    plt.ylabel("$\\tilde{C}_{L}$ Distributions")
+    plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+    plt.subplots_adjust(right=0.8)  # Adjust the right margin
 
 plt.show()
