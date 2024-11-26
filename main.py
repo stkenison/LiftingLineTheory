@@ -109,14 +109,14 @@ C_lda = -np.pi*R_A*c[1]/4
 C_lp = -np.pi*R_A*d[1]/4
 
 
-
 #Coefficients as a result of user-specified operating condition
 #Define needed constants
 delta_a = np.radians(data['condition']['aileron_deflection[deg]'])
+p_steady = -C_lda/C_lp*delta_a #calculate steady rolling rate
 if type(data['condition']['pbar']) == int or type(data['condition']['pbar']) == float:
     p_bar = data['condition']['pbar'] 
 else:
-    p_bar = 1
+    p_bar = p_steady #calculate steady dimenionless roll rate
 print("p_bar = ",p_bar,"NEEDS TO BE REDEFINED, HOW TO CALCULATE (EQN 6.10)")
 
 #calculate coefficient of lift
@@ -145,10 +145,49 @@ C_n = -(A[0]+A[2])*np.pi*R_A*p_bar/8
 for j in range(1,N):
     C_n += np.pi*R_A/4*((2*(j+1)-1)*A[j-1]*A[j])
 
-#calculate steady dimenionless roll rate
-p_steady = -C_lda/C_lp*delta_a
+#Create vectors for dimensionless lift distribution
 
+#Compute planform effects on C_L
+C_L_planform_hat = np.zeros(N)
+for i in range(N):
+    C_L_planform_hat_constant = 0
+    for j in range(N):
+        C_L_planform_hat_constant +=a[j]*np.sin((j+1)*theta[i])
+    C_L_planform_hat[i] = 4*(alpha_root)*C_L_planform_hat_constant
 
+#Compute washout effects on C_L
+C_L_washout_hat = np.zeros(N)
+for i in range(N):
+    C_L_washout_hat_constant = 0
+    for j in range(N):
+        C_L_washout_hat_constant +=b[j]*np.sin((j+1)*theta[i])
+    C_L_washout_hat[i] = -4*washout_amount*C_L_washout_hat_constant
+
+#Compute aileron effect effects on C_L
+C_L_aileron_hat = np.zeros(N)
+for i in range(N):
+    C_L_aileron_hat_constant = 0
+    for j in range(N):
+        C_L_aileron_hat_constant +=c[j]*np.sin((j+1)*theta[i])
+    C_L_aileron_hat[i] = 4*delta_a*C_L_aileron_hat_constant
+
+#Compute roll effect effects on C_L
+C_L_roll_hat = np.zeros(N)
+for i in range(N):
+    C_L_roll_hat_constant = 0
+    for j in range(N):
+        C_L_roll_hat_constant +=d[j]*np.sin((j+1)*theta[i])
+    C_L_roll_hat[i] = 4*p_bar*C_L_roll_hat_constant
+
+#Compute combined C_L of all effects
+C_L_hat = C_L_planform_hat+C_L_washout_hat+C_L_aileron_hat+C_L_roll_hat
+
+#Calculate 
+C_L_planform_tilde = C_L_planform_hat/c_b
+C_L_washout_tilde = C_L_washout_hat/c_b
+C_L_aileron_tilde = C_L_aileron_hat/c_b
+C_L_roll_tilde = C_L_roll_hat/c_b
+C_L_tilde = C_L_planform_tilde+C_L_washout_tilde+C_L_aileron_tilde+C_L_roll_tilde
 
 #write output matrixes to external file
 with open('output.txt', 'w') as f:
@@ -176,7 +215,7 @@ print("C_L =",C_L,"OR",np.pi*R_A*A[0])
 print("C_Di =",C_Di)
 print("C_l =",C_l)
 print("C_n =",C_n)
-print("\u0070\u0304 =",p_steady,"\n")
+print("\u0070\u0304_steady =",p_steady,"\n")
 
 if data['view']['planform']: #plot planform if desired by user
     plt.figure('Planform Plot'); plt.plot(z_b,c_b/4, color = 'blue')
@@ -208,8 +247,24 @@ if data['view']['aileron_distribution']: #plot aileron distribution if desired b
 
 if data['view']['CL_hat_distributions']: #plot CL hat distributions if desired by user
     plt.figure('CL_hat_distributions')
+    plt.plot(z_b,C_L_planform_hat,label='C_L_planform_hat')
+    plt.plot(z_b,C_L_washout_hat,label='C_L_washout_hat')
+    plt.plot(z_b,C_L_aileron_hat,label='C_L_aileron_hat')
+    plt.plot(z_b,C_L_roll_hat,label='C_L_roll_hat')
+    plt.plot(z_b,C_L_hat,label='C_L_hat')
+    plt.grid(True)
+    plt.legend()
+    plt.xlabel("Spanwise Position (z/b)")
 
 if data['view']['CL_tilde_distributions']: #plot CL tilde distributions if desired by user
     plt.figure('CL_tilde_distributions')
+    plt.plot(z_b,C_L_planform_tilde,label='C_L_planform_tilde')
+    plt.plot(z_b,C_L_washout_tilde,label='C_L_washout_tilde')
+    plt.plot(z_b,C_L_aileron_tilde,label='C_L_aileron_tilde')
+    plt.plot(z_b,C_L_roll_tilde,label='C_L_roll_tilde')
+    plt.plot(z_b,C_L_tilde,label='C_L_tilde')
+    plt.grid(True)
+    plt.legend()
+    plt.xlabel("Spanwise Position (z/b)")
 
 plt.show()
