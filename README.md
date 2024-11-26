@@ -18,6 +18,6 @@ using PIP or other similar package-management system.
 
 ## Running program
 
-Run the "VortexPanelProject.py" file using a Python interpreter. Can be run
-in terminal using "python CFD_Project3.py" command or from IDE such
+Run the "main.py" file using a Python interpreter. Can be run
+in terminal using "python main.py" command or from IDE such
 as VSCode. The python program will XXX
