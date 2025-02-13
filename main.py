@@ -1,3 +1,26 @@
+"""
+Lifting Line Theory Analysis Script
+
+Author: Spencer Kenison
+Course: MAE 5500 - Utah State University
+Project: Lifting Line Theory Wing Analysis
+GitHub: https://github.com/yourusername/LiftingLineTheory
+
+Description:
+This script computes aerodynamic properties of a wing using lifting line theory.
+It reads configuration parameters from an input JSON file, performs numerical calculations,
+and outputs aerodynamic coefficients such as lift coefficient, induced drag coefficient,
+rolling moment coefficient, and yawing moment coefficient. Optionally, it generates
+visualizations for the wing planform and lift distribution.
+
+Usage:
+1. Ensure Python 3.11 and required dependencies are installed (see requirements.txt).
+2. Prepare an `input.json` file with the required wing parameters.
+3. Run the script using:
+   ```sh
+   python main.py
+"""
+
 import numpy as np; import os;import matplotlib.pyplot as plt; import json
 os.system('cls'); plt.rcParams['font.family'] = 'Times New Roman'
 
